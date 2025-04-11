@@ -1,0 +1,86 @@
+name: Deploy Catalog to GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'Repository to checkout'
+        required: true
+        type: choice
+        options:
+          - 'k0rdent-oot/catalog'
+          - 'k0rdent/catalog'
+        default: 'k0rdent-oot/catalog'
+      ref:
+        description: 'Branch, tag or SHA to checkout'
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: main
+
+      - name: Configure Git User
+        shell: bash
+        working-directory: main
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+          git config --global init.defaultBranch main
+
+      - name: Reset gh-pages branch
+        shell: bash
+        working-directory: main
+        run: |
+          git checkout --orphan gh-pages
+
+          touch .gitkeep && git add .gitkeep && git commit -m "Reset gh-pages branch"
+          git push origin gh-pages --force
+
+          cd .. && rm -rf main
+
+      - name: Checkout catalog repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.inputs.repository }}
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Update remote origin
+        shell: bash
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git remote -v
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          pip install --upgrade pip
+          pip install -r mkdocs/requirements.txt
+
+      - name: Build pages
+        shell: bash
+        run: |
+          mkdocs build
+
+      - name: Build and Deploy pages
+        shell: bash
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./scripts/deploy_web.sh

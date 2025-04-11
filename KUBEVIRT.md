@@ -38,7 +38,7 @@ metadata:
     k0rdent.mirantis.com/managed: "true"
 spec:
   type: oci
-  url: 'oci://ghcr.io/s3rj1k/k0rdent-kcm-oot/charts'
+  url: 'oci://ghcr.io/k0rdent-oot/oot/charts'
   interval: 10m0s
 ---
 apiVersion: k0rdent.mirantis.com/v1alpha1
@@ -192,14 +192,56 @@ EOF
 
 ## Steps to debug child `KubeVirt` cluster deployment:
 
-- `clusterctl describe cluster kubevirt-demo`
-- `kubectl get cld -A`
-- `kubectl get cluster,machine`
-- `kubectl get K0sControlPlane,KubevirtCluster`
-- `kubectl get vm,vmi`
+> Describe cluster status.
 
-> Note: to get into the Machine console use `virtctl console kubevirt-demo-cp-0` where `kubevirt-demo-cp-0`
-  is `Machine` name, to set console size use `stty rows 40 cols 1000`.
+```bash
+clusterctl describe cluster kubevirt-demo
+```
 
-> Note: to get child cluster kubeconfig `clusterctl get kubeconfig kubevirt-demo > kubevirt-demo.kubeconfig`
-  where `kubevirt-demo` is the cluster name, test kubeconfig with `kubectl --kubeconfig=./kubevirt-demo.kubeconfig get nodes -o wide`
+> Get `ClusterDeployment` objects.
+
+```bash
+kubectl get cld -A
+```
+
+> Get `Cluster`, `Machine` objects.
+
+```bash
+kubectl get cluster,machine
+```
+
+> Get `K0sControlPlane`, `KubevirtCluster` objects.
+
+```bash
+kubectl get K0sControlPlane,KubevirtCluster
+```
+
+> Get `KubeVirt` VM objects.
+
+```bash
+kubectl get vm,vmi
+```
+
+> Get into the Machine console where `kubevirt-demo-cp-0` is `Machine` name.
+
+```bash
+virtctl console kubevirt-demo-cp-0
+```
+
+> Set console size.
+
+```bash
+stty rows 40 cols 1000
+```
+
+> Get child cluster `kubeconfig` where `kubevirt-demo` is the cluster name.
+
+```bash
+clusterctl get kubeconfig kubevirt-demo > kubevirt-demo.kubeconfig
+```
+
+> Test `kubeconfig`.
+
+```bash
+kubectl --kubeconfig=./kubevirt-demo.kubeconfig get nodes -o wide
+```
