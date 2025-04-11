@@ -89,13 +89,14 @@ jobs:
             exit 0
           fi
 
-          # echo "Adding annotations to all charts and preparing them for release"
+          # echo "Patching charts and preparing them for release"
           for chart_dir in $CHART_DIRS; do
             CHART_YAML="$chart_dir/Chart.yaml"
             if [ -f "$CHART_YAML" ]; then
-              echo "Adding annotations to $CHART_YAML"
+              echo "Patching chart $CHART_YAML"
               yq e '.annotations."github.com/source-repo" = "${{ inputs.repository }}"' -i "$CHART_YAML"
               yq e '.annotations."github.com/git-commit" = env(GIT_COMMIT)' -i "$CHART_YAML"
+              yq e '.version = env(CHART_VERSION)' -i "$CHART_YAML"
             fi
           done
 
@@ -137,6 +138,37 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ inputs.repository }}
             org.opencontainers.image.revision=${{ env.GIT_COMMIT }}
             org.opencontainers.image.created=${{ github.event.repository.created_at }}
+
+      - name: Setup ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Delete existing chart versions
+        shell: bash
+        run: |
+          CHART_DIRS=$(find ./templates -name "Chart.yaml" -type f | xargs -I{} dirname {} | sort)
+          if [ -z "$CHART_DIRS" ]; then
+            exit 0
+          fi
+
+          echo "Set up OCI registry login"
+          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io --username ${{ github.actor }} --password-stdin
+
+          for chart_dir in $CHART_DIRS; do
+            CHART_YAML="$chart_dir/Chart.yaml"
+            if [ -f "$CHART_YAML" ]; then
+              CHART_NAME=$(yq e '.name' "$CHART_YAML")
+              CHART_VERSION="${{ env.CHART_VERSION }}"
+              REGISTRY_URL="ghcr.io/${{ github.repository }}/charts"
+
+              echo "Attempting to delete chart $CHART_NAME:$CHART_VERSION from $REGISTRY_URL"
+
+              if oras manifest delete $REGISTRY_URL/$CHART_NAME:$CHART_VERSION --force; then
+                echo "Successfully deleted chart version"
+              else
+                echo "Chart version doesn't exist or couldn't be deleted"
+              fi
+            fi
+          done
 
       - name: Push all charts to GHCR
         run: REGISTRY_REPO="oci://ghcr.io/${{ github.repository }}/charts" make helm-push
