@@ -1,0 +1,2 @@
+config: # @schema description: Configuration settings; type: object
+  namespace: "" # @schema description: Namespace for objects; type: string

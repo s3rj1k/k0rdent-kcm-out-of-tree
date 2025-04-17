@@ -1,0 +1,14 @@
+---
+apiVersion: k0rdent.mirantis.com/v1alpha1
+kind: PluggableProvider
+metadata:
+  name: kubevirt
+spec:
+  template: "cluster-api-provider-kubevirt-0-2-1"
+  clusterGVKs:
+    - group: infrastructure.cluster.x-k8s.io
+      version: v1alpha1
+      kind: KubevirtCluster
+  clusterIdentityKinds:
+    - Secret
+  description: "KubeVirt infrastructure provider for Cluster API"
